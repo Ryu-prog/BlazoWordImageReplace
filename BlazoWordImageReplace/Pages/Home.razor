@@ -1,0 +1,117 @@
+﻿@page "/"
+@using System.IO
+@using SixLabors.ImageSharp
+@using SixLabors.ImageSharp.PixelFormats
+@using WordImageReplace
+@inject IJSRuntime JS
+
+<PageTitle>Word画像差し替えツール</PageTitle>
+
+<div class="container">
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card p-3">
+                <h6>① 修正対象Wordファイル (.docx)</h6>
+                <InputFile OnChange="LoadTemplate" accept=".docx" class="form-control mb-3" />
+
+                <h6>② 表面画像差し替え (.png, .jpg)</h6>
+                <InputFile OnChange="LoadFrontImage" accept=".png, .jpg, .jpeg" class="form-control mb-3" />
+
+                <h6>③ 裏面画像差し替え (.png, .jpg)</h6>
+                <InputFile OnChange="LoadBackImage" accept=".png, .jpg, .jpeg" class="form-control mb-3" />
+
+                <hr />
+                <h6>修正対象の選択</h6>
+                <div class="form-check">
+                    <input type="checkbox" @bind="isChangeFront" class="form-check-input" id="cbFront" />
+                    <label class="form-check-label" for="cbFront">表面画像（片面印刷はこちらのみ）</label>
+                </div>
+                <div class="form-check mb-3">
+                    <input type="checkbox" @bind="isChangeBack" class="form-check-input" id="cbBack" />
+                    <label class="form-check-label" for="cbBack">裏面画像</label>
+                </div>
+
+                <button class="btn btn-primary w-100" @onclick="ExecuteReplace" disabled="@(!isReady)">
+                    画像差し替え実行
+                </button>
+            </div>
+        </div>
+
+        <div class="col-md-4 text-center">
+            <h6>表面プレビュー</h6>
+            @if (!string.IsNullOrEmpty(frontPreview))
+            {
+                <img src="@frontPreview" style="max-width: 100%; height: 300px; border: 1px solid #ccc;" />
+            }
+        </div>
+        <div class="col-md-4 text-center">
+            <h6>裏面プレビュー</h6>
+            @if (!string.IsNullOrEmpty(backPreview))
+            {
+                <img src="@backPreview" style="max-width: 100%; height: 300px; border: 1px solid #ccc;" />
+            }
+        </div>
+    </div>
+</div>
+
+@code {
+    private byte[]? templateData;
+    private byte[]? frontData;
+    private byte[]? backData;
+    private string? frontPreview;
+    private string? backPreview;
+    private string templateFileName = "Result.docx";
+
+    private bool isChangeFront = true; 
+    private bool isChangeBack = false;
+
+    private bool isReady => templateData != null && frontData != null;
+
+    private async Task LoadTemplate(InputFileChangeEventArgs e)
+    {
+        var file = e.File;
+        templateFileName = file.Name.Replace(".dotx", ".docx");
+        using var stream = file.OpenReadStream(maxAllowedSize: 10 * 1024 * 1024); // 10MB制限
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        templateData = ms.ToArray();
+    }
+
+    private async Task LoadFrontImage(InputFileChangeEventArgs e)
+    {
+        frontData = await ReadFileAsBytes(e.File);
+        frontPreview = $"data:{e.File.ContentType};base64,{Convert.ToBase64String(frontData)}";
+    }
+
+    private async Task LoadBackImage(InputFileChangeEventArgs e)
+    {
+        backData = await ReadFileAsBytes(e.File);
+        backPreview = $"data:{e.File.ContentType};base64,{Convert.ToBase64String(backData)}";
+    }
+
+    private async Task<byte[]> ReadFileAsBytes(IBrowserFile file)
+    {
+        using var stream = file.OpenReadStream(maxAllowedSize: 5 * 1024 * 1024);
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+        return ms.ToArray();
+    }
+
+    private async Task ExecuteReplace()
+    {
+        try
+        {
+            // 前に作成した byte[] 版の OpenXmlWordHeaderReplacer を呼び出す
+            var result = OpenXmlWordHeaderReplacer.ReplaceHeaderImages(
+                templateData!, frontData!, backData!, isChangeFront, isChangeBack);
+
+            // ブラウザにダウンロードさせる (JSInterop)
+            var base64 = Convert.ToBase64String(result);
+            await JS.InvokeVoidAsync("downloadFile", templateFileName, base64);
+        }
+        catch (Exception ex)
+        {
+            await JS.InvokeVoidAsync("alert", "エラーが発生しました: " + ex.Message);
+        }
+    }
+}
