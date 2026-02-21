@@ -21,7 +21,7 @@ jobs:
 
       # GitHub Pagesのサブディレクトリ対策（リポジトリ名に置換）
       - name: Fix base-href
-        run: sed -i 's|<base href="/" />|<base href="/WordImageReplace/" />|g' release/wwwroot/index.html
+        run: sed -i 's|<base href="/" />|<base href="/BlazoWordImageReplace/" />|g' release/wwwroot/index.html
         # ※ "WordImageReplace" の部分は自分のリポジトリ名に書き換えてください
 
       # リロード対策（index.htmlを404.htmlとしてコピー）
