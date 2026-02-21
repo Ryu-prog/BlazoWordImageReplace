@@ -17,23 +17,24 @@ jobs:
           dotnet-version: '9.0.x' # 使用している.NETのバージョンに合わせる
 
       - name: Publish app
-        run: dotnet publish -c Release -o release
+        run: |
+          dotnet --version
+          dotnet publish -c Release -o publish
 
-      # GitHub Pagesのサブディレクトリ対策（リポジトリ名に置換）
-      - name: Fix base-href
-        # 検索文字列を少し短くし、前後のスペースを許容するパターンに変更
-        run: sed -i 's|base href="/"|base href="/BlazoWordImageReplace/"|g' release/wwwroot/index.html
-        # ※ "WordImageReplace" の部分は自分のリポジトリ名に書き換えてください
+      - name: Show publish output (for debug)
+        run: ls -la publish/wwwroot || true
+
+      # index.html の base はリポジトリ内で相対 (./) にしているためここで書き換えは不要
 
       # リロード対策（index.htmlを404.htmlとしてコピー）
       - name: copy index.html to 404.html
-        run: cp release/wwwroot/index.html release/wwwroot/404.html
+        run: cp publish/wwwroot/index.html publish/wwwroot/404.html
 
       - name: Add .nojekyll
-        run: touch release/wwwroot/.nojekyll
+        run: touch publish/wwwroot/.nojekyll
 
       - name: Upload to GitHub Pages
         uses: JamesIves/github-pages-deploy-action@v4
         with:
-          folder: release/wwwroot # 公開するフォルダ
+          folder: publish/wwwroot # 公開するフォルダ
           branch: gh-pages # 公開用の専用ブランチに自動デプロイ
