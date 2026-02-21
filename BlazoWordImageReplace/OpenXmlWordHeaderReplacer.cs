@@ -12,6 +12,10 @@ using SixLabors.ImageSharp.PixelFormats;
 
 namespace WordImageReplace
 {
+    /// <summary>
+    /// Open XML を使用して、Word ドキュメント テンプレート内のヘッダー イメージを置換または追加する機能を提供します。
+    /// </summary>
+    /// <remarks>この静的クラスを使用すると、呼び出し元に許可を与えることで Word 文書のヘッダー画像を変更できます。</remarks>
     public static class OpenXmlWordHeaderReplacer
     {
         const long EMU_PER_PIXEL = 9525;
@@ -49,6 +53,11 @@ namespace WordImageReplace
             return memStream.ToArray(); // 処理後のファイルをバイト配列で返す
         }
 
+        /// <summary>
+        /// 指定されたヘッダー部分の既存の画像を新しい画像に置き換えます。画像が存在しない場合は新しい画像を追加します。
+        /// </summary>
+        /// <param name="headerPart"></param>
+        /// <param name="imageBytes"></param>
         private static void ReplaceOrAddImageInHeader(HeaderPart headerPart, byte[] imageBytes)
         {
             if (imageBytes == null || imageBytes.Length == 0) return;
