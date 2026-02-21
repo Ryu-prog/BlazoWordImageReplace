@@ -14,7 +14,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '9.0.x' # 使用している.NETのバージョンに合わせる
+          dotnet-version: '10.0.x' # 使用している.NETのバージョンに合わせる
 
       - name: Publish app
         run: |
@@ -24,7 +24,35 @@ jobs:
       - name: Show publish output (for debug)
         run: ls -la publish/wwwroot || true
 
-      # index.html の base はリポジトリ内で相対 (./) にしているためここで書き換えは不要
+      - name: Fix hashed Blazor runtime filenames
+        run: |
+          set -e
+          FWDIR=publish/wwwroot/_framework
+          if [ -d "$FWDIR" ]; then
+            cd "$FWDIR"
+            # copy the first matching blazor.webassembly.*.js to blazor.webassembly.js
+            for f in blazor.webassembly.*.js; do
+              if [ -f "$f" ]; then
+                cp -n "$f" blazor.webassembly.js || true
+                break
+              fi
+            done
+            # copy compressed variants if present
+            for f in blazor.webassembly.*.js.br; do
+              if [ -f "$f" ]; then
+                cp -n "$f" blazor.webassembly.js.br || true
+                break
+              fi
+            done
+            for f in blazor.webassembly.*.js.gz; do
+              if [ -f "$f" ]; then
+                cp -n "$f" blazor.webassembly.js.gz || true
+                break
+              fi
+            done
+          else
+            echo "_framework folder not found"
+          fi
 
       # リロード対策（index.htmlを404.htmlとしてコピー）
       - name: copy index.html to 404.html
