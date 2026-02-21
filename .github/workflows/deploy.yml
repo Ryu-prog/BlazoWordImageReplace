@@ -1,0 +1,35 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main ] # mainブランチにプッシュされた時に実行
+
+jobs:
+  build-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '9.0.x' # 使用している.NETのバージョンに合わせる
+
+      - name: Publish app
+        run: dotnet publish -c Release -o release
+
+      # GitHub Pagesのサブディレクトリ対策（リポジトリ名に置換）
+      - name: Fix base-href
+        run: sed -i 's|<base href="/" />|<base href="/WordImageReplace/" />|g' release/wwwroot/index.html
+        # ※ "WordImageReplace" の部分は自分のリポジトリ名に書き換えてください
+
+      # リロード対策（index.htmlを404.htmlとしてコピー）
+      - name: copy index.html to 404.html
+        run: cp release/wwwroot/index.html release/wwwroot/404.html
+
+      - name: Upload to GitHub Pages
+        uses: JamesIves/github-pages-deploy-action@v4
+        with:
+          folder: release/wwwroot # 公開するフォルダ
+          branch: gh-pages # 公開用の専用ブランチに自動デプロイ
